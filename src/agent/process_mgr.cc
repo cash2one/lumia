@@ -62,6 +62,10 @@ bool ProcessMgr::Exec(const Process& process,
         delete p;
         return false;
     }else if (pid == 0) {
+        std::set<int>::iterator fd_it = openfds.begin();
+        for (; fd_it !=  openfds.end(); ++fd_it) {
+            close(*fd_it);
+        }
         ok = ResetIo(process);
         if(!ok) {
             assert(0);
