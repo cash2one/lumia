@@ -9,6 +9,8 @@
 #include "logging.h"
 DECLARE_string(lumia_agent_port);
 
+DECLARE_string(lumia_agent_cgroups);
+
 using baidu::common::Log;
 using baidu::common::FATAL;
 using baidu::common::INFO;
@@ -18,6 +20,7 @@ static volatile bool s_quit = false;
 static void SignalIntHandler(int /*sig*/){
     s_quit = true;
 }
+
 
 int main(int argc, char* args[]){
     ::google::ParseCommandLineFlags(&argc, &args, true);

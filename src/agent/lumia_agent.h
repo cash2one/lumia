@@ -19,6 +19,19 @@ struct MountInfo {
     std::string type;
 };
 
+struct TaskInfo {
+    std::string id;
+    std::string content;
+    std::string user;
+    std::string interpreter;
+    std::string workspace;
+    // time track
+    int64_t created;
+    int64_t finished;
+    // 
+    int32_t exit_code;
+};
+
 typedef std::map<std::string, MountInfo> MountContainer;
 
 class LumiaAgentImpl : public LumiaAgent {
@@ -29,6 +42,10 @@ public:
     void Query(::google::protobuf::RpcController* controller,
                const ::baidu::lumia::QueryAgentRequest* request,
                ::baidu::lumia::QueryAgentResponse* response,
+               ::google::protobuf::Closure* done);
+    void Exec(::google::protobuf::RpcController* controller,
+               const ::baidu::lumia::ExecRequest* request,
+               ::baidu::lumia::ExecResponse* response,
                ::google::protobuf::Closure* done);
     bool Init();
 private:
@@ -47,6 +64,7 @@ private:
                   MountContainer& container);
     void KeepAlive();
     std::string GetHostName();
+    bool GetProcPath(std::string* proc);
 private:
     baidu::common::Mutex mutex_;
     std::string smartctl_;
@@ -55,6 +73,7 @@ private:
     baidu::common::ThreadPool pool_;
     std::string ctrl_addr_;
     ::baidu::galaxy::RpcClient* rpc_client_;
+    std::map<std::string, TaskInfo*> tasks_;
 };
 
 }

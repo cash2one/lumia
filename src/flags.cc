@@ -29,3 +29,7 @@ DEFINE_string(lumia_script, "/script", "the path of lumia script ");
 DEFINE_string(lumia_agent_smartctl_bin_path, "./bin/smartctl", "the path of smartctl path");
 DEFINE_string(lumia_agent_port, "8123", "the port of lumia agent");
 DEFINE_string(lumia_agent_ip, "127.0.0.1", "the ip of lumia agent");
+DEFINE_string(lumia_agent_cgroups, "/cgroups", "the sys cgroup root");
+DEFINE_string(lumia_agent_cpu_root_group, "/cgroup/cpu/lumia", "the lumia cpu cgroup root");
+DEFINE_string(lumia_agent_mem_root_group, "/cgroup/memory/lumia", "the lumia mem cgroup root");
+DEFINE_string(lumia_agent_workspace, "/cgroup/memory/lumia", "the lumia mem cgroup root");

@@ -4,6 +4,7 @@
 
 #include "agent/lumia_agent.h"
 
+#include "utils/utils.h"
 #include <sys/utsname.h>
 #include "proto/lumia.pb.h"
 #include <boost/algorithm/string.hpp>
@@ -26,6 +27,7 @@ DECLARE_string(lumia_ctrl_port);
 
 DECLARE_string(lumia_agent_ip);
 DECLARE_string(lumia_agent_port);
+DECLARE_string(lumia_agent_workspace);
 
 
 namespace baidu {
@@ -306,6 +308,58 @@ std::string LumiaAgentImpl::GetHostName(){
     }
     hostname = buf.nodename;
     return hostname; 
+}
+
+void LumiaAgentImpl::Exec(::google::protobuf::RpcController* controller,
+                          const ::baidu::lumia::ExecRequest* request,
+                          ::baidu::lumia::ExecResponse* response,
+                          ::google::protobuf::Closure* done) {
+    MutexLock lock(&mutex_);
+    std::map<std::string, TaskInfo* >::iterator it = tasks_.find(request->id());
+    if (it != tasks_.end()) {
+        LOG(WARNING, "task with id %s does exist", request->id().c_str());
+        response->set_status(kAgentErrInput);
+        done->Run();
+        return;
+    }
+    if (!request->has_content()) {
+        LOG(WARNING, "task with id %s has not script content", request->id().c_str());
+        response->set_status(kAgentErrInput);
+        done->Run();
+        return;
+    }
+    TaskInfo* task = new TaskInfo();
+    task->id = request->id();
+    if (request->has_interpreter()) {
+        task->interpreter = "sh";
+    }
+    task->workspace = FLAGS_lumia_agent_workspace + "/" + task->id;
+    LOG(INFO, "create workspace for task %s", task->id.c_str());
+    const int dir_mode = 0777;
+    int ret = mkdir(task->workspace.c_str(), dir_mode);
+    if (ret == 0 || errno == EEXIST) {
+        std::fstream fs;
+        std::string filename = task->workspace + "/exec";
+        fs.open(filename.c_str(), std::fstream::out);
+        fs << request->content();
+        fs.close();
+        LOG(INFO, "create exec for task %s successfully", task->id.c_str());
+        std::vector<int> fd_vector;
+        std::string command = "sh " + filename;
+        int stdout_fd = -1;
+        int stdin_fd = -1;
+        int stderr_fd = -1;
+        pid_t pid = fork();
+        if (pid < 0) {
+            LOG(WARNING, "fail to fork process for task %s", task->id.c_str());
+            response->set_status(kAgentError);
+            done->Run();
+            return;
+        } else {
+
+        }
+
+    }
 }
 
 }

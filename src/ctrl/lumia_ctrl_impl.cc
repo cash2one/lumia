@@ -127,8 +127,8 @@ void LumiaCtrlImpl::AcquireLumiaLock() {
 
 }
 
-void LumiaCtrlImpl::GetOverview(::google::protobuf::RpcController* controller,
-                    const ::baidu::lumia::GetOverviewRequest* request,
+void LumiaCtrlImpl::GetOverview(::google::protobuf::RpcController*,
+                    const ::baidu::lumia::GetOverviewRequest*,
                     ::baidu::lumia::GetOverviewResponse* response,
                     ::google::protobuf::Closure* done) {
     MutexLock lock(&mutex_);
@@ -181,8 +181,8 @@ void LumiaCtrlImpl::LaunchQuery() {
         LOG(WARNING, "invalide query node count number %d", query_node_count_);
         return;
     }
-    std::set<std::string>::iterator it = nodes_.begin();
-    for (; it != nodes_.end(); ++it) {
+    std::set<std::string>::iterator it = live_nodes_.begin();
+    for (; it != live_nodes_.end(); ++it) {
         QueryNode(*it);
     }
     if (query_node_count_ == 0) {
@@ -207,7 +207,7 @@ void LumiaCtrlImpl::QueryNode(const std::string& node_addr) {
 
 void LumiaCtrlImpl::QueryCallBack(const QueryAgentRequest* request,
                                   QueryAgentResponse* response,
-                                  bool fails, int error, 
+                                  bool fails, int , 
                                   const std::string& node_addr) {
     boost::scoped_ptr<const QueryAgentRequest> request_ptr(request);
     boost::scoped_ptr<QueryAgentResponse> response_ptr(response);
@@ -231,7 +231,7 @@ void LumiaCtrlImpl::QueryCallBack(const QueryAgentRequest* request,
        response->minion_status().all_is_well());
 }
 
-void LumiaCtrlImpl::ImportData(::google::protobuf::RpcController* controller,
+void LumiaCtrlImpl::ImportData(::google::protobuf::RpcController* ,
                     const ::baidu::lumia::ImportDataRequest* request,
                     ::baidu::lumia::ImportDataResponse* response,
                     ::google::protobuf::Closure* done) {
@@ -288,13 +288,14 @@ void LumiaCtrlImpl::ImportData(::google::protobuf::RpcController* controller,
     done->Run();
 }
 
-void LumiaCtrlImpl::Ping(::google::protobuf::RpcController* controller,
+void LumiaCtrlImpl::Ping(::google::protobuf::RpcController*,
                          const ::baidu::lumia::PingRequest* request,
-                         ::baidu::lumia::PingResponse* response,
+                         ::baidu::lumia::PingResponse* ,
                          ::google::protobuf::Closure* done) {
     {
         MutexLock lock(&mutex_);
-        nodes_.insert(request->node_addr());
+        live_nodes_.insert(request->node_addr());
+        dead_nodes_.erase(request->node_addr());
     }
     MutexLock lock(&timer_mutex_);
     std::map<std::string, int64_t>::iterator it = node_timers_.find(request->node_addr());
@@ -313,10 +314,11 @@ void LumiaCtrlImpl::Ping(::google::protobuf::RpcController* controller,
 
 void LumiaCtrlImpl::HandleNodeOffline(const std::string& node_addr) {
     MutexLock lock(&mutex_);
-    nodes_.erase(node_addr);
+    live_nodes_.erase(node_addr);
+    dead_nodes_.insert(node_addr);
 }
 
-void LumiaCtrlImpl::ReportDeadMinion(::google::protobuf::RpcController* controller,
+void LumiaCtrlImpl::ReportDeadMinion(::google::protobuf::RpcController* ,
                           const ::baidu::lumia::ReportDeadMinionRequest* request,
                           ::baidu::lumia::ReportDeadMinionResponse* response,
                           ::google::protobuf::Closure* done) {
@@ -480,6 +482,22 @@ void LumiaCtrlImpl::InitAgentCallBack(const std::string sessionid,
     }
 }
 
+void LumiaCtrlImpl::GetStatus(::google::protobuf::RpcController* controller,
+                    const ::baidu::lumia::GetStatusRequest* request,
+                    ::baidu::lumia::GetStatusResponse* response,
+                    ::google::protobuf::Closure* done) {
+    MutexLock lock(&mutex_);
+    std::set<std::string>::iterator live_node_it =  live_nodes_.begin();
+    for (; live_node_it != live_nodes_.end(); ++live_node_it) {
+        response->add_live_nodes(*live_node_it);
+    }
+    std::set<std::string>::iterator dead_node_it = dead_nodes_.begin();
+    for (; dead_node_it != dead_nodes_.end(); ++dead_node_it) {
+        response->add_dead_nodes(*dead_node_it);
+    }
+    LOG(INFO, "get status live nodes %u, dead nodes %u", live_nodes_.size(), dead_nodes_.size());
+    done->Run();
+}
 
 void LumiaCtrlImpl::RebootCallBack(const std::string sessionid,
                                    const std::vector<std::string> success,
@@ -546,7 +564,6 @@ void LumiaCtrlImpl::GetMinion(::google::protobuf::RpcController* /*controller*/,
     done->Run();
 
 }
-
 
 }
 }

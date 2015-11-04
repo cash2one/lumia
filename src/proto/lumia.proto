@@ -53,6 +53,7 @@ message Minion {
 
     optional string datacenter = 11;
     optional MinionStatus status = 12;
+    optional bool in_pool = 13;
 }
 
 message ReportDeadMinionRequest {
@@ -113,12 +114,19 @@ message GetOverviewResponse {
     repeated MinionOverview minions = 1;
 }
 
+message GetStatusRequest {}
+message GetStatusResponse {
+    repeated string live_nodes = 1;
+    repeated string dead_nodes = 2;
+}
+
 service LumiaCtrl {
     rpc ReportDeadMinion(ReportDeadMinionRequest) returns (ReportDeadMinionResponse);
     rpc GetMinion(GetMinionRequest) returns (GetMinionResponse);
     rpc ImportData(ImportDataRequest) returns (ImportDataResponse);
     rpc Ping(PingRequest) returns (PingResponse);
-    rpc GetOverview(GetOverviewRequest) returns (GetOverviewResponse); 
+    rpc GetOverview(GetOverviewRequest) returns (GetOverviewResponse);
+    rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
 }
 
 

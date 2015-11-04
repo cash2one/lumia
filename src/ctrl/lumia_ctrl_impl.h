@@ -76,8 +76,10 @@ public:
                     const ::baidu::lumia::GetOverviewRequest* request,
                     ::baidu::lumia::GetOverviewResponse* response,
                     ::google::protobuf::Closure* done);
-
-
+    void GetStatus(::google::protobuf::RpcController* controller,
+                    const ::baidu::lumia::GetStatusRequest* request,
+                    ::baidu::lumia::GetStatusResponse* response,
+                    ::google::protobuf::Closure* done);
     void OnSessionTimeout();
 
     void OnLockChange(const std::string& sessionid);
@@ -127,7 +129,8 @@ private:
     InsSDK* nexus_;
 
     // 
-    std::set<std::string> nodes_;
+    std::set<std::string> live_nodes_;
+    std::set<std::string> dead_nodes_;
     std::map<std::string, int64_t>  node_timers_;
 
     // 
