@@ -48,5 +48,28 @@ def get_detail(request):
                            .add_req(request)\
                            .build_tmpl("minion-detail.html")
 
+def get_status(req):
+    response_builder = http.ResponseBuilder()
+    lumia_addr = req.GET.get("lumia", settings.LUMIA_ADDR)
+    lumia = lu_sdk.LumiaSDK(lumia_addr)
+    live_nodes, dead_nodes = lumia.get_status()
+    return response_builder.add_params({"status":0,"msg":"ok","live_nodes":live_nodes,"dead_nodes":dead_nodes})\
+                           .add_req(req)\
+                           .build_tmpl("status.html")
 
+def report(req):
+    response_builder = http.ResponseBuilder()
+    lumia_addr = req.GET.get("lumia", settings.LUMIA_ADDR)
+    lumia = lu_sdk.LumiaSDK(lumia_addr)
+    ip = req.GET.get("ip",None)
+    if not ip:
+        return response_builder.add_params({"status":-1, "msg":"ip is required"})\
+                           .add_req(req)\
+                           .build_tmpl("report.html")
 
+    status = lumia.report(ip)
+    return response_builder.add_params({"status":status, "msg":"ok"})\
+                           .add_req(req)\
+                           .build_tmpl("report.html")
+
+    

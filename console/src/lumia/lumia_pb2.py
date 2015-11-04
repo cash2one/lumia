@@ -17,7 +17,7 @@ from lumia import agent_pb2
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='lumia.proto',
   package='baidu.lumia',
-  serialized_pb='\n\x0blumia.proto\x12\x0b\x62\x61idu.lumia\x1a\x0b\x61gent.proto\"#\n\x03\x43pu\x12\r\n\x05\x63lock\x18\x01 \x01(\t\x12\r\n\x05\x63ount\x18\x02 \x01(\x05\"%\n\x06Memory\x12\x0c\n\x04size\x18\x01 \x01(\x03\x12\r\n\x05\x63ount\x18\x02 \x01(\x05\"2\n\x04\x44isk\x12\x0c\n\x04size\x18\x01 \x01(\x03\x12\r\n\x05\x63ount\x18\x02 \x01(\x05\x12\r\n\x05speed\x18\x03 \x01(\x05\"\xc2\x02\n\x06Minion\x12\n\n\x02id\x18\x01 \x01(\t\x12\n\n\x02ip\x18\x02 \x01(\t\x12\x0f\n\x07rock_ip\x18\x03 \x01(\t\x12\x10\n\x08hostname\x18\x04 \x01(\t\x12\'\n\x05state\x18\x05 \x01(\x0e\x32\x18.baidu.lumia.MinionState\x12\x1d\n\x03\x63pu\x18\x06 \x01(\x0b\x32\x10.baidu.lumia.Cpu\x12 \n\x03mem\x18\x07 \x01(\x0b\x32\x13.baidu.lumia.Memory\x12\x1f\n\x04\x64isk\x18\x08 \x01(\x0b\x32\x11.baidu.lumia.Disk\x12 \n\x05\x66lash\x18\t \x01(\x0b\x32\x11.baidu.lumia.Disk\x12\x11\n\tbandwidth\x18\n \x01(\x05\x12\x12\n\ndatacenter\x18\x0b \x01(\t\x12)\n\x06status\x18\x0c \x01(\x0b\x32\x19.baidu.lumia.MinionStatus\"5\n\x17ReportDeadMinionRequest\x12\n\n\x02ip\x18\x01 \x01(\t\x12\x0e\n\x06reason\x18\x02 \x01(\t\"D\n\x18ReportDeadMinionResponse\x12(\n\x06status\x18\x01 \x01(\x0e\x32\x18.baidu.lumia.LumiaStatus\"/\n\x07Minions\x12$\n\x07minions\x18\x01 \x03(\x0b\x32\x13.baidu.lumia.Minion\"?\n\x10GetMinionRequest\x12\x0b\n\x03ips\x18\x01 \x03(\t\x12\x11\n\thostnames\x18\x02 \x03(\t\x12\x0b\n\x03ids\x18\x03 \x03(\t\"9\n\x11GetMinionResponse\x12$\n\x07minions\x18\x01 \x03(\x0b\x32\x13.baidu.lumia.Minion\"-\n\x0cSystemScript\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\"f\n\x11ImportDataRequest\x12%\n\x07minions\x18\x01 \x01(\x0b\x32\x14.baidu.lumia.Minions\x12*\n\x07scripts\x18\x02 \x03(\x0b\x32\x19.baidu.lumia.SystemScript\">\n\x12ImportDataResponse\x12(\n\x06status\x18\x01 \x01(\x0e\x32\x18.baidu.lumia.LumiaStatus\" \n\x0bPingRequest\x12\x11\n\tnode_addr\x18\x01 \x01(\t\"8\n\x0cPingResponse\x12(\n\x06status\x18\x01 \x01(\x0e\x32\x18.baidu.lumia.LumiaStatus\"e\n\x0eMinionOverview\x12\x10\n\x08hostname\x18\x01 \x01(\t\x12\n\n\x02ip\x18\x02 \x01(\t\x12\x10\n\x08mount_ok\x18\x03 \x01(\x08\x12\x11\n\tdevice_ok\x18\x04 \x01(\x08\x12\x10\n\x08\x64\x61tetime\x18\x05 \x01(\x03\"\x14\n\x12GetOverviewRequest\"C\n\x13GetOverviewResponse\x12,\n\x07minions\x18\x01 \x03(\x0b\x32\x1b.baidu.lumia.MinionOverview*j\n\x0bLumiaStatus\x12\x0c\n\x08kLumiaOk\x10\x00\x12\x18\n\x14kLumiaMinionNotFound\x10\x01\x12\x19\n\x15kLumiaMinionInProcess\x10\x02\x12\x18\n\x14kLumiaScriptNotFound\x10\x03*\xa2\x01\n\x0bMinionState\x12\x10\n\x0ckMinionAlive\x10\x00\x12\x15\n\x11kMinionRestarting\x10\x01\x12\x17\n\x13kMinionReinstalling\x10\x02\x12\x12\n\x0ekMinionIniting\x10\x03\x12\x17\n\x13kMinionDeadChecking\x10\x04\x12\x12\n\x0ekMinionJoining\x10\x05\x12\x10\n\x0ckMinionError\x10\x06\x32\x96\x03\n\tLumiaCtrl\x12_\n\x10ReportDeadMinion\x12$.baidu.lumia.ReportDeadMinionRequest\x1a%.baidu.lumia.ReportDeadMinionResponse\x12J\n\tGetMinion\x12\x1d.baidu.lumia.GetMinionRequest\x1a\x1e.baidu.lumia.GetMinionResponse\x12M\n\nImportData\x12\x1e.baidu.lumia.ImportDataRequest\x1a\x1f.baidu.lumia.ImportDataResponse\x12;\n\x04Ping\x12\x18.baidu.lumia.PingRequest\x1a\x19.baidu.lumia.PingResponse\x12P\n\x0bGetOverview\x12\x1f.baidu.lumia.GetOverviewRequest\x1a .baidu.lumia.GetOverviewResponseB\x06\x80\x01\x01\x90\x01\x01')
+  serialized_pb='\n\x0blumia.proto\x12\x0b\x62\x61idu.lumia\x1a\x0b\x61gent.proto\"#\n\x03\x43pu\x12\r\n\x05\x63lock\x18\x01 \x01(\t\x12\r\n\x05\x63ount\x18\x02 \x01(\x05\"%\n\x06Memory\x12\x0c\n\x04size\x18\x01 \x01(\x03\x12\r\n\x05\x63ount\x18\x02 \x01(\x05\"2\n\x04\x44isk\x12\x0c\n\x04size\x18\x01 \x01(\x03\x12\r\n\x05\x63ount\x18\x02 \x01(\x05\x12\r\n\x05speed\x18\x03 \x01(\x05\"\xc2\x02\n\x06Minion\x12\n\n\x02id\x18\x01 \x01(\t\x12\n\n\x02ip\x18\x02 \x01(\t\x12\x0f\n\x07rock_ip\x18\x03 \x01(\t\x12\x10\n\x08hostname\x18\x04 \x01(\t\x12\'\n\x05state\x18\x05 \x01(\x0e\x32\x18.baidu.lumia.MinionState\x12\x1d\n\x03\x63pu\x18\x06 \x01(\x0b\x32\x10.baidu.lumia.Cpu\x12 \n\x03mem\x18\x07 \x01(\x0b\x32\x13.baidu.lumia.Memory\x12\x1f\n\x04\x64isk\x18\x08 \x01(\x0b\x32\x11.baidu.lumia.Disk\x12 \n\x05\x66lash\x18\t \x01(\x0b\x32\x11.baidu.lumia.Disk\x12\x11\n\tbandwidth\x18\n \x01(\x05\x12\x12\n\ndatacenter\x18\x0b \x01(\t\x12)\n\x06status\x18\x0c \x01(\x0b\x32\x19.baidu.lumia.MinionStatus\"5\n\x17ReportDeadMinionRequest\x12\n\n\x02ip\x18\x01 \x01(\t\x12\x0e\n\x06reason\x18\x02 \x01(\t\"D\n\x18ReportDeadMinionResponse\x12(\n\x06status\x18\x01 \x01(\x0e\x32\x18.baidu.lumia.LumiaStatus\"/\n\x07Minions\x12$\n\x07minions\x18\x01 \x03(\x0b\x32\x13.baidu.lumia.Minion\"?\n\x10GetMinionRequest\x12\x0b\n\x03ips\x18\x01 \x03(\t\x12\x11\n\thostnames\x18\x02 \x03(\t\x12\x0b\n\x03ids\x18\x03 \x03(\t\"9\n\x11GetMinionResponse\x12$\n\x07minions\x18\x01 \x03(\x0b\x32\x13.baidu.lumia.Minion\"-\n\x0cSystemScript\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\x0c\"f\n\x11ImportDataRequest\x12%\n\x07minions\x18\x01 \x01(\x0b\x32\x14.baidu.lumia.Minions\x12*\n\x07scripts\x18\x02 \x03(\x0b\x32\x19.baidu.lumia.SystemScript\">\n\x12ImportDataResponse\x12(\n\x06status\x18\x01 \x01(\x0e\x32\x18.baidu.lumia.LumiaStatus\" \n\x0bPingRequest\x12\x11\n\tnode_addr\x18\x01 \x01(\t\"8\n\x0cPingResponse\x12(\n\x06status\x18\x01 \x01(\x0e\x32\x18.baidu.lumia.LumiaStatus\"e\n\x0eMinionOverview\x12\x10\n\x08hostname\x18\x01 \x01(\t\x12\n\n\x02ip\x18\x02 \x01(\t\x12\x10\n\x08mount_ok\x18\x03 \x01(\x08\x12\x11\n\tdevice_ok\x18\x04 \x01(\x08\x12\x10\n\x08\x64\x61tetime\x18\x05 \x01(\x03\"\x14\n\x12GetOverviewRequest\"C\n\x13GetOverviewResponse\x12,\n\x07minions\x18\x01 \x03(\x0b\x32\x1b.baidu.lumia.MinionOverview\"\x12\n\x10GetStatusRequest\";\n\x11GetStatusResponse\x12\x12\n\nlive_nodes\x18\x01 \x03(\t\x12\x12\n\ndead_nodes\x18\x02 \x03(\t*j\n\x0bLumiaStatus\x12\x0c\n\x08kLumiaOk\x10\x00\x12\x18\n\x14kLumiaMinionNotFound\x10\x01\x12\x19\n\x15kLumiaMinionInProcess\x10\x02\x12\x18\n\x14kLumiaScriptNotFound\x10\x03*\xa2\x01\n\x0bMinionState\x12\x10\n\x0ckMinionAlive\x10\x00\x12\x15\n\x11kMinionRestarting\x10\x01\x12\x17\n\x13kMinionReinstalling\x10\x02\x12\x12\n\x0ekMinionIniting\x10\x03\x12\x17\n\x13kMinionDeadChecking\x10\x04\x12\x12\n\x0ekMinionJoining\x10\x05\x12\x10\n\x0ckMinionError\x10\x06\x32\xe2\x03\n\tLumiaCtrl\x12_\n\x10ReportDeadMinion\x12$.baidu.lumia.ReportDeadMinionRequest\x1a%.baidu.lumia.ReportDeadMinionResponse\x12J\n\tGetMinion\x12\x1d.baidu.lumia.GetMinionRequest\x1a\x1e.baidu.lumia.GetMinionResponse\x12M\n\nImportData\x12\x1e.baidu.lumia.ImportDataRequest\x1a\x1f.baidu.lumia.ImportDataResponse\x12;\n\x04Ping\x12\x18.baidu.lumia.PingRequest\x1a\x19.baidu.lumia.PingResponse\x12P\n\x0bGetOverview\x12\x1f.baidu.lumia.GetOverviewRequest\x1a .baidu.lumia.GetOverviewResponse\x12J\n\tGetStatus\x12\x1d.baidu.lumia.GetStatusRequest\x1a\x1e.baidu.lumia.GetStatusResponseB\x06\x80\x01\x01\x90\x01\x01')
 
 _LUMIASTATUS = _descriptor.EnumDescriptor(
   name='LumiaStatus',
@@ -44,8 +44,8 @@ _LUMIASTATUS = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=1293,
-  serialized_end=1399,
+  serialized_start=1374,
+  serialized_end=1480,
 )
 
 LumiaStatus = enum_type_wrapper.EnumTypeWrapper(_LUMIASTATUS)
@@ -86,8 +86,8 @@ _MINIONSTATE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=1402,
-  serialized_end=1564,
+  serialized_start=1483,
+  serialized_end=1645,
 )
 
 MinionState = enum_type_wrapper.EnumTypeWrapper(_MINIONSTATE)
@@ -499,8 +499,8 @@ _SYSTEMSCRIPT = _descriptor.Descriptor(
       options=None),
     _descriptor.FieldDescriptor(
       name='content', full_name='baidu.lumia.SystemScript.content', index=1,
-      number=2, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=unicode("", "utf-8"),
+      number=2, type=12, cpp_type=9, label=1,
+      has_default_value=False, default_value="",
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
@@ -741,6 +741,62 @@ _GETOVERVIEWRESPONSE = _descriptor.Descriptor(
   serialized_end=1291,
 )
 
+
+_GETSTATUSREQUEST = _descriptor.Descriptor(
+  name='GetStatusRequest',
+  full_name='baidu.lumia.GetStatusRequest',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  extension_ranges=[],
+  serialized_start=1293,
+  serialized_end=1311,
+)
+
+
+_GETSTATUSRESPONSE = _descriptor.Descriptor(
+  name='GetStatusResponse',
+  full_name='baidu.lumia.GetStatusResponse',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='live_nodes', full_name='baidu.lumia.GetStatusResponse.live_nodes', index=0,
+      number=1, type=9, cpp_type=9, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='dead_nodes', full_name='baidu.lumia.GetStatusResponse.dead_nodes', index=1,
+      number=2, type=9, cpp_type=9, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  extension_ranges=[],
+  serialized_start=1313,
+  serialized_end=1372,
+)
+
 _MINION.fields_by_name['state'].enum_type = _MINIONSTATE
 _MINION.fields_by_name['cpu'].message_type = _CPU
 _MINION.fields_by_name['mem'].message_type = _MEMORY
@@ -772,6 +828,8 @@ DESCRIPTOR.message_types_by_name['PingResponse'] = _PINGRESPONSE
 DESCRIPTOR.message_types_by_name['MinionOverview'] = _MINIONOVERVIEW
 DESCRIPTOR.message_types_by_name['GetOverviewRequest'] = _GETOVERVIEWREQUEST
 DESCRIPTOR.message_types_by_name['GetOverviewResponse'] = _GETOVERVIEWRESPONSE
+DESCRIPTOR.message_types_by_name['GetStatusRequest'] = _GETSTATUSREQUEST
+DESCRIPTOR.message_types_by_name['GetStatusResponse'] = _GETSTATUSRESPONSE
 
 class Cpu(_message.Message):
   __metaclass__ = _reflection.GeneratedProtocolMessageType
@@ -875,6 +933,18 @@ class GetOverviewResponse(_message.Message):
 
   # @@protoc_insertion_point(class_scope:baidu.lumia.GetOverviewResponse)
 
+class GetStatusRequest(_message.Message):
+  __metaclass__ = _reflection.GeneratedProtocolMessageType
+  DESCRIPTOR = _GETSTATUSREQUEST
+
+  # @@protoc_insertion_point(class_scope:baidu.lumia.GetStatusRequest)
+
+class GetStatusResponse(_message.Message):
+  __metaclass__ = _reflection.GeneratedProtocolMessageType
+  DESCRIPTOR = _GETSTATUSRESPONSE
+
+  # @@protoc_insertion_point(class_scope:baidu.lumia.GetStatusResponse)
+
 
 DESCRIPTOR.has_options = True
 DESCRIPTOR._options = _descriptor._ParseOptions(descriptor_pb2.FileOptions(), '\200\001\001\220\001\001')
@@ -885,8 +955,8 @@ _LUMIACTRL = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   options=None,
-  serialized_start=1567,
-  serialized_end=1973,
+  serialized_start=1648,
+  serialized_end=2130,
   methods=[
   _descriptor.MethodDescriptor(
     name='ReportDeadMinion',
@@ -931,6 +1001,15 @@ _LUMIACTRL = _descriptor.ServiceDescriptor(
     containing_service=None,
     input_type=_GETOVERVIEWREQUEST,
     output_type=_GETOVERVIEWRESPONSE,
+    options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='GetStatus',
+    full_name='baidu.lumia.LumiaCtrl.GetStatus',
+    index=5,
+    containing_service=None,
+    input_type=_GETSTATUSREQUEST,
+    output_type=_GETSTATUSRESPONSE,
     options=None,
   ),
 ])

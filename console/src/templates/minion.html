@@ -37,11 +37,13 @@ td, th {
     <h4>Lumia!</h4>
     <table class="table" style="font-size:10px; width:100%" border="0"  cellspacing="0" cellpadding="0" >
         <tr>
-            <th>hostname</th>
-            <th>ip</th>
-            <th>device</th>
-            <th>mount</th>
-            <th>update</th>
+            <th>#</th>
+            <th>主机名</th>
+            <th>IP</th>
+            <th>设备状态</th>
+            <th>挂载状态</th>
+            <th>更新日期</th>
+            <th>操作</th>
         </tr>
 
         {% for minion in minions %}
@@ -50,6 +52,7 @@ td, th {
             {% else %}
             <tr class="status_err">
             {% endif %}
+             <td>{{forloop.counter}}</td>
                 <td> <a href="detail?ip={{minion.ip}}&lumia={{lumia_addr}}">{{minion.hostname}}</td>
                 <td> {{minion.ip}}</td>
                 {% if minion.device_ok%}
@@ -63,6 +66,7 @@ td, th {
                 <td> kMountError </td>
                 {% endif %}
                 <td> {{minion.last_update}}</td>
+                <td> <a href="report?ip={{minion.ip}}&lumia={{lumia_addr}}">重新初始化</td>
             </tr>
         {% endfor %}
     </table>

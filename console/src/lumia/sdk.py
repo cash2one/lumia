@@ -51,3 +51,30 @@ class LumiaSDK(object):
         except:
             LOG.exception("fail to call list node")
         return []
+
+    def get_status(self):
+        lumia_ctrl = lumia_pb2.LumiaCtrl_Stub(self.channel)
+        controller = client.Controller()
+        controller.SetTimeout(2.5)
+        request = lumia_pb2.GetStatusRequest()
+        try:
+            response = lumia_ctrl.GetStatus(controller, request)
+            return response.live_nodes, response.dead_nodes
+        except:
+            LOG.exception("fail to call get status")
+        return [], []
+
+    def report(self, ip):
+        lumia_ctrl = lumia_pb2.LumiaCtrl_Stub(self.channel)
+        controller = client.Controller()
+        controller.SetTimeout(2.5)
+        request = lumia_pb2.ReportDeadMinionRequest()
+        request.ip = ip
+        try:
+            response = lumia_ctrl.ReportDeadMinion(controller, request)
+            return response.status
+        except:
+            LOG.exception("fail to call get status")
+        return [], []
+
+

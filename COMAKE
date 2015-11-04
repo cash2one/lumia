@@ -25,7 +25,7 @@ CXXFLAGS('-g -pipe -W -Wall -fPIC')
 PROTOC('../../../third-64/protobuf/bin/protoc')
 
 #头文件路径.
-INCPATHS('. ./src ./src/proto ./output/include ./common/include ./ins/sdk/')
+INCPATHS('. ./src ./src/proto ./output/include ./common/include ./ins/sdk/ ./galaxy/output/include')
 
 #使用库
 LIBS('./common/libcommon.a ./ins/libins_sdk.a')
@@ -63,14 +63,19 @@ lumia_client_src = 'src/client/lumia_client.cc\
                     src/flags.cc'
 
 lumia_agent_src = 'src/agent/lumia_agent.cc\
+                  src/agent/process_mgr.cc\
                   src/agent/lumia_agent_main.cc\
                   src/flags.cc\
                   src/proto/agent.proto\
                   src/proto/lumia.proto'
+
+process_mgr_test = 'src/agent/process_test.cc\
+                  src/agent/process_mgr.cc'
 
 lumia_headers = 'src/sdk/lumia.h'
 StaticLibrary('lumia',Sources(lumia_sdk_src),HeaderFiles(lumia_headers))
 Application('lumia_ctrl',Sources(lumia_ctrl_src))
 Application('lumia',Sources(lumia_client_src))
 Application('lumia_agent',Sources(lumia_agent_src))
+Application('process_test',Sources(process_mgr_test))
 

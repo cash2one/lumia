@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <sys/mount.h>
 #include <pwd.h>
 #include <sstream>
@@ -41,56 +42,58 @@ bool ProcessMgr::Exec(const Process& process,
         LOG(WARNING, "user %s does not exists", process.user_.c_str());
         return false;
     }
-    Process* p = new Process();
+    Process* p = New();
     p->cmd_ = process.cmd_;
     p->user_ = process.user_;
     p->envs_ = process.envs_;
     p->pty_ = process.pty_;
     p->ctime_ = ::baidu::common::timer::get_micros();
     p->dtime_ = 0;
-    p->running_ = false;
-    p->pid_ = -1;
-    p->ecode_ = -1;
     std::set<int> openfds;
     ok = GetOpenedFds(openfds);
     if (!ok) {
         LOG(WARNING, "fail to pid %d get opened fds", mypid_);
         return false;
     }
-    *id = GetUUID();
-    processes_.insert(std::make_pair(*id, p));
-    p->pid_ = fork();
-    if (p->pid_ == -1) {
+    p->id_ = GetUUID();
+    pid_t pid = fork();
+    if (pid == -1) {
         LOG(WARNING, "fail to fork process for cmd %s", p->cmd_.c_str());
         delete p;
         return false;
-    }else if (p->pid_ == 0) {
+    }else if (pid == 0) {
         ok = ResetIo(process);
         if(!ok) {
             assert(0);
         }
+        pid_t self_pid = getpid();
+        int ret = setpgid(self_pid, self_pid);
+        if (ret != 0) {
+            fprintf(stderr, "fail to set pgid %d", self_pid);
+            assert(0);
+        }
         if (!process.cwd_.empty()) {
-            int ret = chdir(process.cwd_.c_str());
+            ret = chdir(process.cwd_.c_str());
             if (ret != 0) {
                 fprintf(stderr, "fail to chdir to %s", process.cwd_.c_str());
                 assert(0);
             }
         }
         if (!process.rootfs_.empty()) {
-            int ret = chroot(process.rootfs_.c_str());
+            ret = chroot(process.rootfs_.c_str());
             if (ret != 0) {
                 fprintf(stderr, "fail to chroot to %s", process.rootfs_.c_str());
                 assert(0);
             }
         }
-        int ret = setuid(uid);
-        if (!ret) {
+        ret = setuid(uid);
+        if (ret != 0) {
             fprintf(stderr, "fail to set uid %d", uid);
             assert(0);
         }
 
         ret = setgid(gid);
-        if (!ret) {
+        if (ret != 0) {
             fprintf(stderr, "fail to set gid %d", gid);
             assert(0);
         }
@@ -106,17 +109,36 @@ bool ProcessMgr::Exec(const Process& process,
             env[index] =const_cast<char*>(it->c_str());
             ++index;
         }
-        env[index + 1] = NULL;
+        env[index] = NULL;
         ::execve("/bin/sh", argv, env);
         assert(0);
+    }else {
+        *id = p->id_;
+        p->pid_ = pid;
+        p->running_ = true;
+        processes_.insert(std::make_pair(p->id_, p));
+        LOG(INFO, "create process %s successfully with pid %d", p->id_.c_str(), p->pid_);
+        return true;
     }
-    return true;
 }
 
 std::string ProcessMgr::GetUUID(){
     boost::uuids::uuid uuid = boost::uuids::random_generator()();
     return boost::lexical_cast<std::string>(uuid); 
 }
+
+Process* ProcessMgr::New(){
+    Process* p = new Process();
+    p->ctime_ = ::baidu::common::timer::get_micros();
+    p->dtime_ = 0;
+    p->running_ = false;
+    p->pid_ = -1;
+    p->ecode_ = -1;
+    p->gpid_ = -1;
+    p->coredump_ = false;
+    return p;
+}
+
 
 bool ProcessMgr::GetUser(const std::string& user,
                          uid_t* uid,
@@ -200,6 +222,41 @@ bool ProcessMgr::ResetIo(const Process& process) {
     return ret;
 }
 
+bool ProcessMgr::Wait(const std::string& id, Process* process) {
+    std::map<std::string, Process*>::iterator it = processes_.find(id);
+    if (it == processes_.end()) {
+        LOG(WARNING, "fail to find process with id %s", id.c_str());
+        return false;
+    }
+    if (!it->second->running_) {
+        process->CopyFrom(it->second);
+        return true;
+    }
+    int status = -1;
+    pid_t ret_pid = ::waitpid(it->second->pid_, &status, WNOHANG);
+    // process exit
+    if (ret_pid == it->second->pid_) {
+        LOG(DEBUG, "process %s with pid %d exists", id.c_str(), it->second->pid_);
+        it->second->running_ = false;
+        it->second->dtime_ = ::baidu::common::timer::get_micros();
+        it->second->coredump_ = false;
+        // normal exit
+        if (WIFEXITED(status)) {
+            it->second->ecode_ = WEXITSTATUS(status);
+        }else if(WCOREDUMP(status)) {
+            it->second->coredump_ = true;
+        }
+        process->CopyFrom(it->second);
+    } else if (ret_pid == 0) {
+        it->second->running_ = true;
+        process->CopyFrom(it->second);
+        LOG(DEBUG, "process %s with pid %d is running", id.c_str(), it->second->pid_);
+    } else {
+        LOG(WARNING, "check process %s with pid %d with error %s ", id.c_str(), it->second->pid_, strerror(errno));
+        return false;
+    }
+    return true;
+}
 
 bool ProcessMgr::GetOpenedFds(std::set<int>& fds) {
     std::stringstream ss;
