@@ -46,6 +46,7 @@ message QueryAgentResponse {
     optional MinionStatus minion_status = 1;
     optional int32 status = 2;
     optional string ip = 3;
+    repeated TaskStatus task_status = 4; 
 }
 
 message ExecRequest {

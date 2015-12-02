@@ -31,11 +31,12 @@ struct MinionIndex {
 enum CtrlTaskState {
     kCtrlTaskPending,
     kCtrlTaskRunning,
+    kCtrlTaskFails,
     kCtrlTaskExit
 };
 
 struct Task {
-    CtrlTaskState state;
+    CtrlTaskState state_;
     std::string addr_;
     int32_t offset_;
     std::string job_id_;
@@ -45,8 +46,9 @@ struct Job {
     std::string id_;
     std::string content_;
     std::string user_;
+    int64_t running_num_;
     std::set<std::string> hosts_;
-    std::map<std::string, Task*> tasks_;
+    std::map<int32_t, Task*> tasks_;
     int32_t step_size_;
 };
 
@@ -134,6 +136,11 @@ private:
 
     void ScheduleTask();
     void ScheduleNextQuery();
+    bool RunTask(Job* job, Task* task);
+    void RunTaskCallback(const ExecRequest* request,
+                         ExecResponse* response,
+                         bool fails, int , 
+                         const std::string& node_addr);
     void LaunchQuery();
     void QueryNode(const std::string& node_addr);
     void QueryCallBack(const QueryAgentRequest* request,
@@ -169,7 +176,7 @@ private:
     ::baidu::galaxy::RpcClient* rpc_client_;
 
     std::set<std::string>* job_under_working_;
-    std::set<std::string>* job_error_;
+    std::set<std::string>* job_completed_;
 };
 
 }

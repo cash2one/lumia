@@ -56,7 +56,7 @@ LumiaCtrlImpl::LumiaCtrlImpl():workers_(4){
     rpc_client_ = new ::baidu::galaxy::RpcClient();
     query_node_count_ = 0;
     job_under_working_ = new std::set<std::string>();
-    job_error_ = new std::set<std::string>();
+    job_completed_ = new std::set<std::string>();
 }
 
 void LumiaCtrlImpl::OnLockChange(const std::string& sessionid) {
@@ -580,24 +580,27 @@ void LumiaCtrlImpl::ScheduleTask() {
     std::set<std::string>::iterator it = job_under_working_.begin();
     for (; it != job_under_working_.end(); ++it) {
         Job* job = jobs_[*it];
-        int32_t running = 0;
         std::map<std::string, Task*>::iterator task_it = job->tasks_.begin();
-        for (; task_it != job->tasks_.end() && running < job->step_size_;
+        for (; task_it != job->tasks_.end() && job->running_num_ < job->step_size_;
               ++task_it) {
-            if (task_it->second->state == kCtrlTaskRunning) {
-                ++ running;
+            if (task_it->second->state_ != kCtrlTaskPending) {
                 continue;
             }
-
+            bool ok = RunTask(job, task_it->second);
+            LOG(INFO, "launch task %d of job %s on agent %s successfully", 
+                    task_it->second->offset_,
+                    job->id_.c_str(),
+                    task_it->addr.c_str());
+            job->running_num_ ++;
         }
     }
 }
 
-void LumiaCtrlImpl::RunTask(Job* job, Task* task) {
+bool LumiaCtrlImpl::RunTask(Job* job, Task* task) {
     mutex_.AssertHeld();
     if (task == NULL) {
         LOG(WARNING, "task is null");
-        return;
+        return false;
     }
     ExecRequest* request = new ExecRequest();
     request->set_job_id(task->job_id_);
@@ -608,10 +611,10 @@ void LumiaCtrlImpl::RunTask(Job* job, Task* task) {
     boost::function<void (const ExecRequest*, ExecResponse*, bool, int)> run_callback;
     run_callback = boost::bind(&LumiaCtrlImpl::RunCallback, this, 
             _1, _2, _3, _4, task->addr_);
-    task->state = kCtrlRunning;
+    task->state_ = kCtrlRunning;
     rpc_client_->AsyncRequest(agent, &LumiaAgent_Stub::Exec,
                               request, response, run_callback, 5, 0);
-
+    return true;
 }
 
 void LumiaCtrlImpl::RunTaskCallback(const ExecRequest* request,
@@ -622,7 +625,15 @@ void LumiaCtrlImpl::RunTaskCallback(const ExecRequest* request,
     boost::scoped_ptr<ExecResponse> response_ptr(response);
     MutexLock lock(&mutex_);
     if (fails || response.status() != 0) {
-        job_under_working_
+        LOG(WARNING, "the job %s task %d exec fails on agent %s",
+                request->job_id().c_str(),
+                request->offset(),
+                node_addr.c_str());
+        std::map<std::string, Job*>::iterator it = jobs_.find(request->job_id());
+        if (it != jobs_.end()) {
+            it->second->tasks_[request->offset()]->state_ = kCtrlFails;
+        }
+        it->second->running_num_--;
     }
 }
 
@@ -646,11 +657,12 @@ void LumiaCtrlImpl::Exec(::google::protobuf::RpcController* controller,
         }
         Task* task = new Task();
         task->job_id_ = job->id_;
-        task->state = kCtrlTaskPending;
+        task->state_ = kCtrlTaskPending;
         task->offset_ = i;
         task->addr = request->hosts(i);
-        job->tasks_.push_back(task);
+        job->tasks_.insert(std::make_pair(i, task));
     }
+    job->running_num_ = 0;
     job_under_working_.insert(job->id_);
     response->set_status(kLumiaOk);
     done->Run();
