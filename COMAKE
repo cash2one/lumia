@@ -74,8 +74,8 @@ process_mgr_test = 'src/agent/process_test.cc\
 
 lumia_headers = 'src/sdk/lumia.h'
 StaticLibrary('lumia',Sources(lumia_sdk_src),HeaderFiles(lumia_headers))
-Application('lumia_ctrl',Sources(lumia_ctrl_src))
+Application('lumia_master',Sources(lumia_ctrl_src))
 Application('lumia',Sources(lumia_client_src))
-Application('lumia_agent',Sources(lumia_agent_src))
+Application('lumia_let',Sources(lumia_agent_src))
 Application('process_test',Sources(process_mgr_test))
 

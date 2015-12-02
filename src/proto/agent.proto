@@ -10,6 +10,12 @@ enum LumiaAgentStatus {
     kAgentError = 3;
 }
 
+enum TaskState {
+    kTaskRunning = 0;
+    kTaskCompleted = 1;
+    kTaskError = 2;
+}
+
 message DeviceStatus {
     optional string name = 1;
     optional bool healthy = 2;
@@ -28,6 +34,12 @@ message MinionStatus {
     optional bool all_is_well = 5;
 }
 
+message TaskStatus {
+    optional string job_id = 1;
+    optional int32 offset = 2;
+    optional TaskState state = 3; 
+}
+
 message QueryAgentRequest {}
 
 message QueryAgentResponse {
@@ -37,19 +49,19 @@ message QueryAgentResponse {
 }
 
 message ExecRequest {
-    optional string id = 1;
-    optional bytes content = 2;
-    optional string user = 3;
-    optional string interpreter = 4;
+    optional string job_id = 1;
+    optional int32 offset = 2;
+    optional bytes content = 3;
+    optional string user = 4;
 }
 
 message ExecResponse {
     optional int32 status = 1;
 }
 
+
 service LumiaAgent {
     rpc Query(QueryAgentRequest) returns (QueryAgentResponse);
     rpc Exec(ExecRequest) returns (ExecResponse);
 }
-
 

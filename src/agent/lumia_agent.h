@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 #include "proto/agent.pb.h"
+
 #include <string>
 #include <vector>
 #include <map>
 #include "mutex.h"
 #include "thread_pool.h"
 #include "rpc/rpc_client.h"
+#include "agent/process_mgr.h"
 
 namespace baidu {
 namespace lumia {
@@ -23,6 +25,7 @@ struct TaskInfo {
     std::string id;
     std::string content;
     std::string user;
+    bool running;
     std::string interpreter;
     std::string workspace;
     // time track
@@ -30,6 +33,8 @@ struct TaskInfo {
     int64_t finished;
     // 
     int32_t exit_code;
+    std::string pid;
+    std::string output;
 };
 
 typedef std::map<std::string, MountInfo> MountContainer;
@@ -65,6 +70,7 @@ private:
     void KeepAlive();
     std::string GetHostName();
     bool GetProcPath(std::string* proc);
+    void CheckTask(const std::string& id);
 private:
     baidu::common::Mutex mutex_;
     std::string smartctl_;
@@ -74,6 +80,7 @@ private:
     std::string ctrl_addr_;
     ::baidu::galaxy::RpcClient* rpc_client_;
     std::map<std::string, TaskInfo*> tasks_;
+    ProcessMgr process_mgr_;
 };
 
 }

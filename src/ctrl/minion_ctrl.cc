@@ -37,7 +37,7 @@ MinionCtrl::MinionCtrl(const std::string& ccs_http_server,
 
 MinionCtrl::~MinionCtrl(){}
 
-bool MinionCtrl::Exec(const std::string& script,
+bool MinionCtrl::ExecOnNoah(const std::string& script,
                       const std::vector<std::string>& hosts,
                       const std::string& account,
                       int32_t concurrency,

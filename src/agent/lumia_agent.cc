@@ -15,6 +15,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <signal.h>
 #include "logging.h"
 #include "timer.h"
 #include <gflags/gflags.h>
@@ -34,7 +35,7 @@ namespace baidu {
 namespace lumia {
 
 LumiaAgentImpl::LumiaAgentImpl():smartctl_(FLAGS_lumia_agent_smartctl_bin_path),
-    pool_(4){
+    pool_(4), process_mgr_(){
     rpc_client_ = new ::baidu::galaxy::RpcClient();
 }
 
@@ -334,6 +335,8 @@ void LumiaAgentImpl::Exec(::google::protobuf::RpcController* controller,
         task->interpreter = "sh";
     }
     task->workspace = FLAGS_lumia_agent_workspace + "/" + task->id;
+    task->content = request->content();
+    task->created = ::baidu::common::timer::get_micros();
     LOG(INFO, "create workspace for task %s", task->id.c_str());
     const int dir_mode = 0777;
     int ret = mkdir(task->workspace.c_str(), dir_mode);
@@ -344,21 +347,57 @@ void LumiaAgentImpl::Exec(::google::protobuf::RpcController* controller,
         fs << request->content();
         fs.close();
         LOG(INFO, "create exec for task %s successfully", task->id.c_str());
-        std::vector<int> fd_vector;
-        std::string command = "sh " + filename;
-        int stdout_fd = -1;
-        int stdin_fd = -1;
-        int stderr_fd = -1;
-        pid_t pid = fork();
-        if (pid < 0) {
-            LOG(WARNING, "fail to fork process for task %s", task->id.c_str());
+        Process process;
+        process.cmd_ =  "sh exec" ;
+        process.cwd_ = task->workspace;
+        process.user_ = request->user();
+        bool ok = process_mgr_.Exec(process, &task->pid);
+        if (!ok) {
+            LOG(WARNING, "fail to run task %s", task->id.c_str());
             response->set_status(kAgentError);
             done->Run();
+            delete task;
             return;
-        } else {
-
+        }else {
+            task->running = true;
+            tasks_.insert(std::make_pair(task->id, task));
+            response->set_status(kAgentOk);
+            done->Run();
+            pool_.DelayTask(2000, boost::bind(&LumiaAgentImpl::CheckTask, this, task->id));
+            return;
         }
 
+    }
+    response->set_status(kAgentError);
+    done->Run();
+}
+
+void LumiaAgentImpl::CheckTask(const std::string& id) {
+    MutexLock lock(&mutex_);
+    std::map<std::string, TaskInfo*>::iterator it = tasks_.find(id);
+    if (it == tasks_.end()) {
+        LOG(WARNING, "check task %s which does not exis in agent", id.c_str());
+        return;
+    }
+    Process process;
+    bool ok = process_mgr_.Wait(it->second->pid, &process);
+    if (!ok) {
+        LOG(WARNING, "fail to check process %s for task %s ", it->second->pid.c_str(), id.c_str());
+        process_mgr_.Kill(it->second->pid, 9);
+        it->second->running = false;
+        it->second->finished = ::baidu::common::timer::get_micros();
+        return;
+    }
+    if (process.running_) {
+        it->second->running = true;
+        pool_.DelayTask(2000, boost::bind(&LumiaAgentImpl::CheckTask, this, id));
+        return;
+    }else {
+        LOG(INFO, "task %s exist", id.c_str());
+        it->second->running = false;
+        it->second->finished = ::baidu::common::timer::get_micros();
+        it->second->exit_code = process.ecode_;
+        process_mgr_.Kill(it->second->pid, 9);
     }
 }
 

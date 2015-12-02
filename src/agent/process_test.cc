@@ -1,6 +1,7 @@
 #include "agent/process_mgr.h"
 #include <iostream>
 #include <unistd.h>
+#include <signal.h>
 int main(int argc, char* args[]) {
     ::baidu::lumia::ProcessMgr process_mgr;
     ::baidu::lumia::Process p;
@@ -14,6 +15,9 @@ int main(int argc, char* args[]) {
         std::cout << p.running_ << "\n";
         sleep(1);
         if (!p.running_) {
+            break;
+        }
+        if(process_mgr.Kill(id, SIGTERM)) {
             break;
         }
     }

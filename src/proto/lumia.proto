@@ -54,6 +54,7 @@ message Minion {
     optional string datacenter = 11;
     optional MinionStatus status = 12;
     optional bool in_pool = 13;
+    optional bool hyper_threading = 14;
 }
 
 message ReportDeadMinionRequest {
@@ -120,6 +121,19 @@ message GetStatusResponse {
     repeated string dead_nodes = 2;
 }
 
+message ExecTaskRequest {
+    repeated bytes content = 1;
+    optional string user = 2;
+    repeated string hosts = 3;
+    optional int32 step_size = 4;
+}
+
+message ExecTaskResponse {
+    optional string id = 1;
+    optional LumiaStatus status = 2;
+    repeated string not_exist_hosts = 3;
+}
+
 service LumiaCtrl {
     rpc ReportDeadMinion(ReportDeadMinionRequest) returns (ReportDeadMinionResponse);
     rpc GetMinion(GetMinionRequest) returns (GetMinionResponse);
@@ -127,6 +141,7 @@ service LumiaCtrl {
     rpc Ping(PingRequest) returns (PingResponse);
     rpc GetOverview(GetOverviewRequest) returns (GetOverviewResponse);
     rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
+    rpc Exec(ExecTaskRequest) returns (ExecTaskResponse);
 }
 
 

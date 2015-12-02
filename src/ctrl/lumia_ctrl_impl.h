@@ -28,6 +28,29 @@ struct MinionIndex {
     MinionIndex(std::string id, const std::string& hostname, const std::string ip, Minion* minion):id_(id), hostname_(hostname), ip_(ip), minion_(minion){}
 };
 
+enum CtrlTaskState {
+    kCtrlTaskPending,
+    kCtrlTaskRunning,
+    kCtrlTaskExit
+};
+
+struct Task {
+    CtrlTaskState state;
+    std::string addr_;
+    int32_t offset_;
+    std::string job_id_;
+};
+
+struct Job {
+    std::string id_;
+    std::string content_;
+    std::string user_;
+    std::set<std::string> hosts_;
+    std::map<std::string, Task*> tasks_;
+    int32_t step_size_;
+};
+
+
 struct id_tag{};
 struct hostname_tag{};
 struct ip_tag{};
@@ -83,6 +106,11 @@ public:
     void OnSessionTimeout();
 
     void OnLockChange(const std::string& sessionid);
+
+    void Exec(::google::protobuf::RpcController* controller,
+              const ::baidu::lumia::ExecTaskRequest* request,
+              ::baidu::lumia::ExecTaskResponse* response,
+              ::google::protobuf::Closure* done);
 private:
     void HandleDeadReport(const std::string& ip);
     void CheckDeadCallBack(const std::string sessionid, 
@@ -104,6 +132,7 @@ private:
 
     void HandleNodeOffline(const std::string& node_addr);
 
+    void ScheduleTask();
     void ScheduleNextQuery();
     void LaunchQuery();
     void QueryNode(const std::string& node_addr);
@@ -112,6 +141,7 @@ private:
                        bool fails,
                        int error,
                        const std::string& node_addr);
+    std::string GetUUID();
 private:
     MinionSet minion_set_;
     ::baidu::common::Mutex mutex_;
@@ -132,10 +162,14 @@ private:
     std::set<std::string> live_nodes_;
     std::set<std::string> dead_nodes_;
     std::map<std::string, int64_t>  node_timers_;
-
-    // 
+    typedef std::map<std::string, std::map<std::string, Task*> > TasksOnAgent;
+    std::map<std::string, Job*> jobs_;
+    TasksOnAgent tasks_on_agent_;
     int64_t query_node_count_;
     ::baidu::galaxy::RpcClient* rpc_client_;
+
+    std::set<std::string>* job_under_working_;
+    std::set<std::string>* job_error_;
 };
 
 }

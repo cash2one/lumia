@@ -44,6 +44,7 @@ struct Process {
     }
 };
 
+//NOTE not thread safe
 class ProcessMgr {
 
 public:
@@ -51,6 +52,7 @@ public:
     ~ProcessMgr();
     bool Exec(const Process& process, std::string* id);
     bool Wait(const std::string& id, Process* process);
+    bool Kill(const std::string& id, int signal);
 private:
     bool GetOpenedFds(std::set<int>& fds);
     bool ResetIo(const Process& process);

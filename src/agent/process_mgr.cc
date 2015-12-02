@@ -119,6 +119,7 @@ bool ProcessMgr::Exec(const Process& process,
     }else {
         *id = p->id_;
         p->pid_ = pid;
+        p->gpid_ = pid;
         p->running_ = true;
         processes_.insert(std::make_pair(p->id_, p));
         LOG(INFO, "create process %s successfully with pid %d", p->id_.c_str(), p->pid_);
@@ -257,6 +258,25 @@ bool ProcessMgr::Wait(const std::string& id, Process* process) {
         LOG(DEBUG, "process %s with pid %d is running", id.c_str(), it->second->pid_);
     } else {
         LOG(WARNING, "check process %s with pid %d with error %s ", id.c_str(), it->second->pid_, strerror(errno));
+        return false;
+    }
+    return true;
+}
+
+bool ProcessMgr::Kill(const std::string& id, int signal) {
+    std::map<std::string, Process*>::iterator it = processes_.find(id);
+    if (it == processes_.end()) {
+        LOG(WARNING, "process with id %s does not exist", id.c_str());
+        return false;
+    }
+    if (it->second->gpid_ <= 0) {
+        LOG(WARNING, "process with id %s has invalide gpid %d", id.c_str(), it->second->gpid_);
+        return false;
+    }
+    int ok = ::killpg(it->second->gpid_, signal);
+    processes_.erase(id);
+    if (ok != 0) {
+        LOG(WARNING, "fail to kill process group %d with err %s", it->second->gpid_, strerror(errno));
         return false;
     }
     return true;
