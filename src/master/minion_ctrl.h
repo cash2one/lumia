@@ -5,7 +5,7 @@
 #define BAIDU_CTRL_MACHINE_H
 
 #include <boost/function.hpp>
-#include "ctrl/http_client.h"
+#include "master/http_client.h"
 #include "thread_pool.h"
 #include "mutex.h"
 

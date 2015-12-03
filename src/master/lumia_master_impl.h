@@ -1,14 +1,14 @@
 // Copyright (c) 2015, Baidu.com, Inc. All Rights Reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef BAIDU_LUMIA_ENGINE_LUMIA_IMPL_H
-#define BAIDU_LUMIA_ENGINE_LUMIA_IMPL_H
+#ifndef BAIDU_LUMIA_MASTER_LUMIA_IMPL_H
+#define BAIDU_LUMIA_MASTER_LUMIA_IMPL_H
 #include <set>
 #include "proto/lumia.pb.h"
 #include "mutex.h"
 #include "thread_pool.h"
 #include "ins_sdk.h"
-#include "ctrl/minion_ctrl.h"
+#include "master/minion_ctrl.h"
 #include "rpc/rpc_client.h"
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/member.hpp>
@@ -72,11 +72,11 @@ typedef boost::multi_index::index<MinionSet, hostname_tag>::type minion_set_host
 
 typedef boost::multi_index::index<MinionSet, ip_tag>::type minion_set_ip_index_t;
 
-class LumiaCtrlImpl : public LumiaCtrl {
+class LumiaMasterImpl : public LumiaCtrl {
 
 public:
-    LumiaCtrlImpl();
-    ~LumiaCtrlImpl();
+    LumiaMasterImpl();
+    ~LumiaMasterImpl();
     void Init();
     // galaxy log checker report dead agent
     void ReportDeadMinion(::google::protobuf::RpcController* controller,
@@ -143,8 +143,8 @@ private:
                          const std::string& node_addr);
     void LaunchQuery();
     void QueryNode(const std::string& node_addr);
-    void QueryCallBack(const QueryAgentRequest* request,
-                       QueryAgentResponse* response,
+    void QueryCallBack(const QueryRequest* request,
+                       QueryResponse* response,
                        bool fails,
                        int error,
                        const std::string& node_addr);

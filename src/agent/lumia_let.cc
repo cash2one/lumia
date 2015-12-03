@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "agent/lumia_agent.h"
+#include "agent/lumia_let.h"
 
 #include "utils/utils.h"
 #include <sys/utsname.h>
@@ -34,15 +34,15 @@ DECLARE_string(lumia_agent_workspace);
 namespace baidu {
 namespace lumia {
 
-LumiaAgentImpl::LumiaAgentImpl():smartctl_(FLAGS_lumia_agent_smartctl_bin_path),
+LumiaLetImpl::LumiaLetImpl():smartctl_(FLAGS_lumia_agent_smartctl_bin_path),
     pool_(4), process_mgr_(){
     rpc_client_ = new ::baidu::galaxy::RpcClient();
 }
 
-LumiaAgentImpl::~LumiaAgentImpl(){}
+LumiaLetImpl::~LumiaLetImpl(){}
 
 //TODO sync exec
-bool LumiaAgentImpl::ScanDevice(std::vector<std::string>& devices) {
+bool LumiaLetImpl::ScanDevice(std::vector<std::string>& devices) {
     std::string cmd = smartctl_ + " --scan";
     std::stringstream ss;
     int exit_code = -1;
@@ -53,7 +53,7 @@ bool LumiaAgentImpl::ScanDevice(std::vector<std::string>& devices) {
     return false;
 }
 
-bool LumiaAgentImpl::ParseScanDevice(const std::string& output,
+bool LumiaLetImpl::ParseScanDevice(const std::string& output,
                                  std::vector<std::string>& devices) {
     LOG(INFO, "parse scan result %s ", output.c_str());
     std::vector<std::string> lines;
@@ -70,19 +70,19 @@ bool LumiaAgentImpl::ParseScanDevice(const std::string& output,
     return true;
 }
 
-bool LumiaAgentImpl::Init() {
+bool LumiaLetImpl::Init() {
     bool ok = ScanDevice(devices_);
     if (ok) {
         LOG(INFO, "scan devices successfully");
     } else {
         LOG(INFO, "fail to scan devices");
     }
-    pool_.AddTask(boost::bind(&LumiaAgentImpl::DoCheck, this));
-    pool_.DelayTask(2000, boost::bind(&LumiaAgentImpl::KeepAlive, this));
+    pool_.AddTask(boost::bind(&LumiaLetImpl::DoCheck, this));
+    pool_.DelayTask(2000, boost::bind(&LumiaLetImpl::KeepAlive, this));
     return ok;
 }
 
-void LumiaAgentImpl::DoCheck() {
+void LumiaLetImpl::DoCheck() {
     MinionStatus status;
     status.set_all_is_well(true);
     std::vector<std::string>::iterator it = devices_.begin();
@@ -111,10 +111,10 @@ void LumiaAgentImpl::DoCheck() {
     status.set_datetime(baidu::common::timer::get_micros());
     MutexLock lock(&mutex_);
     minion_status_.CopyFrom(status);
-    pool_.DelayTask(10000, boost::bind(&LumiaAgentImpl::DoCheck, this));
+    pool_.DelayTask(10000, boost::bind(&LumiaLetImpl::DoCheck, this));
 }
 
-void LumiaAgentImpl::KeepAlive() {
+void LumiaLetImpl::KeepAlive() {
     LumiaCtrl_Stub* lumia_;
     std::string ctrl_addr = FLAGS_lumia_ctrl_host + ":" + FLAGS_lumia_ctrl_port;
     rpc_client_->GetStub(ctrl_addr, &lumia_);
@@ -128,10 +128,10 @@ void LumiaAgentImpl::KeepAlive() {
     if (!ok) {
         LOG(WARNING, "ping ctrl %s fails", ctrl_addr.c_str());
     }
-    pool_.DelayTask(2000, boost::bind(&LumiaAgentImpl::KeepAlive, this));
+    pool_.DelayTask(2000, boost::bind(&LumiaLetImpl::KeepAlive, this));
 }
 
-bool LumiaAgentImpl::SyncExec(const std::string& cmd,
+bool LumiaLetImpl::SyncExec(const std::string& cmd,
                           std::stringstream& output,
                           int* exit_code) {
     int pipe_fd[2];
@@ -188,7 +188,7 @@ bool LumiaAgentImpl::SyncExec(const std::string& cmd,
     return ret;
 }
 
-bool LumiaAgentImpl::ReadFile(const std::string& path,
+bool LumiaLetImpl::ReadFile(const std::string& path,
                           std::stringstream& content) {
     std::ifstream is;
     is.open(path.c_str(), std::ifstream::binary);
@@ -201,7 +201,7 @@ bool LumiaAgentImpl::ReadFile(const std::string& path,
     return true;
 }
 
-bool LumiaAgentImpl::CheckDevice(const std::string& devices, bool* ok) {
+bool LumiaLetImpl::CheckDevice(const std::string& devices, bool* ok) {
     std::string cmd = smartctl_ + " -H " + devices;
     std::stringstream ss;
     int exit_code = -1;
@@ -223,7 +223,7 @@ bool LumiaAgentImpl::CheckDevice(const std::string& devices, bool* ok) {
     return false;
 }
 
-bool LumiaAgentImpl::CheckMounts(bool* all_mounted, MinionStatus& status) {
+bool LumiaLetImpl::CheckMounts(bool* all_mounted, MinionStatus& status) {
     std::stringstream ss;
     bool ok = ReadFile("/etc/fstab", ss);
     if (!ok) {
@@ -258,7 +258,7 @@ bool LumiaAgentImpl::CheckMounts(bool* all_mounted, MinionStatus& status) {
     return true;
 }
 
-bool LumiaAgentImpl::ParseTab(const std::string& content,
+bool LumiaLetImpl::ParseTab(const std::string& content,
                             MountContainer& container) {
     std::vector<std::string> lines;
     boost::split(lines, content, boost::is_any_of("\n"));
@@ -290,9 +290,9 @@ bool LumiaAgentImpl::ParseTab(const std::string& content,
     return true;
 }
 
-void LumiaAgentImpl::Query(::google::protobuf::RpcController* /*controller*/,
-                           const ::baidu::lumia::QueryAgentRequest* /*request*/,
-                           ::baidu::lumia::QueryAgentResponse* response,
+void LumiaLetImpl::Query(::google::protobuf::RpcController* /*controller*/,
+                           const ::baidu::lumia::QueryRequest* /*request*/,
+                           ::baidu::lumia::QueryResponse* response,
                            ::google::protobuf::Closure* done) {
     MutexLock lock(&mutex_);
     response->mutable_minion_status()->CopyFrom(minion_status_);
@@ -301,7 +301,7 @@ void LumiaAgentImpl::Query(::google::protobuf::RpcController* /*controller*/,
     done->Run();
 }
 
-std::string LumiaAgentImpl::GetHostName(){
+std::string LumiaLetImpl::GetHostName(){
     std::string hostname = "";
     struct utsname buf;
     if (0 != uname(&buf)) {
@@ -311,29 +311,27 @@ std::string LumiaAgentImpl::GetHostName(){
     return hostname; 
 }
 
-void LumiaAgentImpl::Exec(::google::protobuf::RpcController* controller,
+void LumiaLetImpl::Exec(::google::protobuf::RpcController* controller,
                           const ::baidu::lumia::ExecRequest* request,
                           ::baidu::lumia::ExecResponse* response,
                           ::google::protobuf::Closure* done) {
     MutexLock lock(&mutex_);
-    std::map<std::string, TaskInfo* >::iterator it = tasks_.find(request->id());
+    std::map<std::string, TaskInfo* >::iterator it = tasks_.find(request->job_id());
     if (it != tasks_.end()) {
-        LOG(WARNING, "task with id %s does exist", request->id().c_str());
+        LOG(WARNING, "task with id %s does exist", request->job_id().c_str());
         response->set_status(kAgentErrInput);
         done->Run();
         return;
     }
     if (!request->has_content()) {
-        LOG(WARNING, "task with id %s has not script content", request->id().c_str());
+        LOG(WARNING, "task with id %s has not script content", request->job_id().c_str());
         response->set_status(kAgentErrInput);
         done->Run();
         return;
     }
     TaskInfo* task = new TaskInfo();
-    task->id = request->id();
-    if (request->has_interpreter()) {
-        task->interpreter = "sh";
-    }
+    task->id = request->job_id();
+    task->interpreter = "sh";
     task->workspace = FLAGS_lumia_agent_workspace + "/" + task->id;
     task->content = request->content();
     task->created = ::baidu::common::timer::get_micros();
@@ -363,7 +361,7 @@ void LumiaAgentImpl::Exec(::google::protobuf::RpcController* controller,
             tasks_.insert(std::make_pair(task->id, task));
             response->set_status(kAgentOk);
             done->Run();
-            pool_.DelayTask(2000, boost::bind(&LumiaAgentImpl::CheckTask, this, task->id));
+            pool_.DelayTask(2000, boost::bind(&LumiaLetImpl::CheckTask, this, task->id));
             return;
         }
 
@@ -372,7 +370,7 @@ void LumiaAgentImpl::Exec(::google::protobuf::RpcController* controller,
     done->Run();
 }
 
-void LumiaAgentImpl::CheckTask(const std::string& id) {
+void LumiaLetImpl::CheckTask(const std::string& id) {
     MutexLock lock(&mutex_);
     std::map<std::string, TaskInfo*>::iterator it = tasks_.find(id);
     if (it == tasks_.end()) {
@@ -390,7 +388,7 @@ void LumiaAgentImpl::CheckTask(const std::string& id) {
     }
     if (process.running_) {
         it->second->running = true;
-        pool_.DelayTask(2000, boost::bind(&LumiaAgentImpl::CheckTask, this, id));
+        pool_.DelayTask(2000, boost::bind(&LumiaLetImpl::CheckTask, this, id));
         return;
     }else {
         LOG(INFO, "task %s exist", id.c_str());

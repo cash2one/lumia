@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #include <gflags/gflags.h>
-#include <ctrl/lumia_ctrl_impl.h>
+#include <master/lumia_master_impl.h>
 #include <sofa/pbrpc/pbrpc.h>
 #include <logging.h>
 #include <signal.h>
-#include "baas-lib-c/baas.h"
 
 using baidu::common::Log;
 using baidu::common::FATAL;
@@ -22,22 +21,21 @@ static void SignalIntHandler(int /*sig*/){
 }
 
 int main(int argc, char* args[]) {
-    baas::BAAS_Init();
     ::google::ParseCommandLineFlags(&argc, &args, true);
     sofa::pbrpc::RpcServerOptions options;
     sofa::pbrpc::RpcServer rpc_server(options);
-    ::baidu::lumia::LumiaCtrlImpl* ctrl = new ::baidu::lumia::LumiaCtrlImpl();
+    ::baidu::lumia::LumiaMasterImpl* ctrl = new ::baidu::lumia::LumiaMasterImpl();
     ctrl->Init();
     if (!rpc_server.RegisterService(ctrl)) {
-        LOG(FATAL, "failed to register lumia controller");
+        LOG(FATAL, "failed to register lumia master");
         exit(-1);
     }   
     std::string server_addr = "0.0.0.0:" + FLAGS_lumia_ctrl_port;
     if (!rpc_server.Start(server_addr)) {
-        LOG(FATAL, "failed to start lumia controller on %s", server_addr.c_str());
+        LOG(FATAL, "failed to start lumia master on %s", server_addr.c_str());
         exit(-2);
     }else {
-        LOG(INFO, "start lumia with port %s", FLAGS_lumia_ctrl_port.c_str());
+        LOG(INFO, "start lumia master with port %s", FLAGS_lumia_ctrl_port.c_str());
     }  
     signal(SIGINT, SignalIntHandler);
     signal(SIGTERM, SignalIntHandler);

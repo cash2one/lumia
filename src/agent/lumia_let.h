@@ -39,14 +39,14 @@ struct TaskInfo {
 
 typedef std::map<std::string, MountInfo> MountContainer;
 
-class LumiaAgentImpl : public LumiaAgent {
+class LumiaLetImpl : public LumiaLet {
 
 public:
-    LumiaAgentImpl();
-    ~LumiaAgentImpl();
+    LumiaLetImpl();
+    ~LumiaLetImpl();
     void Query(::google::protobuf::RpcController* controller,
-               const ::baidu::lumia::QueryAgentRequest* request,
-               ::baidu::lumia::QueryAgentResponse* response,
+               const ::baidu::lumia::QueryRequest* request,
+               ::baidu::lumia::QueryResponse* response,
                ::google::protobuf::Closure* done);
     void Exec(::google::protobuf::RpcController* controller,
                const ::baidu::lumia::ExecRequest* request,

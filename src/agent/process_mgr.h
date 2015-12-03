@@ -6,6 +6,7 @@
 #include <map>
 #include <unistd.h>
 #include <string>
+#include <stdint.h>
 
 namespace baidu {
 namespace lumia {

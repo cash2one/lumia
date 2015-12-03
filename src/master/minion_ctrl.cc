@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "ctrl/minion_ctrl.h"
+#include "master/minion_ctrl.h"
 
 #include <boost/algorithm/string/join.hpp>
 #include "rapidjson/writer.h"
 #include <gflags/gflags.h>
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
-#include "baas-lib-c/baas.h"
 #include <boost/uuid/uuid.hpp>
 #include <boost/bind.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -216,21 +215,7 @@ bool MinionCtrl::GenerateTicket(std::string* ticket,
                                  std::string* service) {
     if (ticket == NULL || service == NULL) {
         return false;
-    }
-    baas::CredentialGenerator generator = baas::EmptyCredentialGenerator();
-    generator = baas::ClientUtility::Login();
-    if (!generator.IsOK()) {
-        LOG(WARNING, "fail to login error code %d, error msg %s", generator.ErrorCode(), generator.ErrorMsg().c_str());
-        return false;
-    }
-    int ret = generator.GenerateCredential(ticket);
-    if (ret != baas::sdk::BAAS_OK) {
-        LOG(WARNING, "fail to GenerateTicket error code %d, error msg %d",
-          ret,
-          baas::sdk::GetReturnCodeMessage(ret).c_str());
-        return false;
-    }
-    *service = generator.my_user();
+    } 
     return true;
 }
 

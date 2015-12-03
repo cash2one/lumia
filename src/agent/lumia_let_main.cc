@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 #include <sofa/pbrpc/pbrpc.h>
-#include "agent/lumia_agent.h"
+#include "agent/lumia_let.h"
 #include <gflags/gflags.h>
 #include <signal.h>
 #include "logging.h"
+
 DECLARE_string(lumia_agent_port);
 
 DECLARE_string(lumia_agent_cgroups);
@@ -24,7 +25,7 @@ static void SignalIntHandler(int /*sig*/){
 
 int main(int argc, char* args[]){
     ::google::ParseCommandLineFlags(&argc, &args, true);
-    ::baidu::lumia::LumiaAgentImpl* agent = new ::baidu::lumia::LumiaAgentImpl();
+    ::baidu::lumia::LumiaLetImpl* agent = new ::baidu::lumia::LumiaLetImpl();
     bool ok = agent->Init();
     if (!ok) {
         LOG(FATAL, "fail to init agent");

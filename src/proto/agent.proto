@@ -40,9 +40,9 @@ message TaskStatus {
     optional TaskState state = 3; 
 }
 
-message QueryAgentRequest {}
+message QueryRequest {}
 
-message QueryAgentResponse {
+message QueryResponse {
     optional MinionStatus minion_status = 1;
     optional int32 status = 2;
     optional string ip = 3;
@@ -61,8 +61,8 @@ message ExecResponse {
 }
 
 
-service LumiaAgent {
-    rpc Query(QueryAgentRequest) returns (QueryAgentResponse);
+service LumiaLet {
+    rpc Query(QueryRequest) returns (QueryResponse);
     rpc Exec(ExecRequest) returns (ExecResponse);
 }
 

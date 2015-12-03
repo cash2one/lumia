@@ -122,7 +122,7 @@ message GetStatusResponse {
 }
 
 message ExecTaskRequest {
-    repeated bytes content = 1;
+    optional bytes content = 1;
     optional string user = 2;
     repeated string hosts = 3;
     optional int32 step_size = 4;

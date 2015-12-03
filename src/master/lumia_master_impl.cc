@@ -1,9 +1,9 @@
 // Copyright (c) 2015, Baidu.com, Inc. All Rights Reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include "ctrl/lumia_ctrl_impl.h"
+#include "master/lumia_master_impl.h"
 
-#include "ctrl/lumia_ctrl_util.h"
+#include "master/lumia_master_util.h"
 #include "proto/agent.pb.h"
 #include <boost/algorithm/string/join.hpp>
 #include <boost/lexical_cast.hpp>
@@ -39,17 +39,17 @@ const static int64_t MEM_RESERVED = 6442450944;
 const static int32_t CPU_IDLE = 700;
 
 static void OnLumiaSessionTimeout(void* ctx) {
-    LumiaCtrlImpl* lumia = static_cast<LumiaCtrlImpl*>(ctx);
+    LumiaMasterImpl* lumia = static_cast<LumiaMasterImpl*>(ctx);
     lumia->OnSessionTimeout();
 }
 
 static void OnLumiaLockChange(const ::galaxy::ins::sdk::WatchParam& param,
   ::galaxy::ins::sdk::SDKError) {
-    LumiaCtrlImpl* lumia = static_cast<LumiaCtrlImpl*>(param.context);
+    LumiaMasterImpl* lumia = static_cast<LumiaMasterImpl*>(param.context);
     lumia->OnLockChange(param.value);
 }
 
-LumiaCtrlImpl::LumiaCtrlImpl():workers_(4){
+LumiaMasterImpl::LumiaMasterImpl():workers_(4){
     minion_ctrl_ = new MinionCtrl(FLAGS_ccs_api_http_host,
                                   FLAGS_rms_api_http_host);
     nexus_ = new ::galaxy::ins::sdk::InsSDK(FLAGS_nexus_servers);
@@ -59,7 +59,7 @@ LumiaCtrlImpl::LumiaCtrlImpl():workers_(4){
     job_completed_ = new std::set<std::string>();
 }
 
-void LumiaCtrlImpl::OnLockChange(const std::string& sessionid) {
+void LumiaMasterImpl::OnLockChange(const std::string& sessionid) {
     std::string self_sessionid = nexus_->GetSessionID();
     if (self_sessionid != sessionid) {
         LOG(WARNING, "lumia lost lock");
@@ -68,26 +68,26 @@ void LumiaCtrlImpl::OnLockChange(const std::string& sessionid) {
 }
 
 
-LumiaCtrlImpl::~LumiaCtrlImpl() {
+LumiaMasterImpl::~LumiaMasterImpl() {
     delete minion_ctrl_;
     delete nexus_;
 }
 
-void LumiaCtrlImpl::Init() {
+void LumiaMasterImpl::Init() {
     AcquireLumiaLock(); 
 }
-void LumiaCtrlImpl::OnSessionTimeout() {
+void LumiaMasterImpl::OnSessionTimeout() {
     LOG(WARNING, "time out with nexus");
     abort();
 }
 
-void LumiaCtrlImpl::AcquireLumiaLock() {
+void LumiaMasterImpl::AcquireLumiaLock() {
     std::string lock = FLAGS_lumia_root_path + FLAGS_lumia_lock;
     ::galaxy::ins::sdk::SDKError err;
     nexus_->RegisterSessionTimeout(&OnLumiaSessionTimeout, this);
     bool ret = nexus_->Lock(lock, &err); //whould block until accquired
     assert(ret && err == ::galaxy::ins::sdk::kOK);
-    std::string lumia_endpoint = LumiaUtil::GetHostName() + ":" + FLAGS_lumia_ctrl_port;
+    std::string lumia_endpoint = LumiaMasterUtil::GetHostName() + ":" + FLAGS_lumia_ctrl_port;
     std::string lumia_key = FLAGS_lumia_root_path + FLAGS_lumia_main;
     ret = nexus_->Put(lumia_key, lumia_endpoint, &err);
     assert(ret && err == ::galaxy::ins::sdk::kOK);
@@ -132,7 +132,7 @@ void LumiaCtrlImpl::AcquireLumiaLock() {
 
 }
 
-void LumiaCtrlImpl::GetOverview(::google::protobuf::RpcController*,
+void LumiaMasterImpl::GetOverview(::google::protobuf::RpcController*,
                     const ::baidu::lumia::GetOverviewRequest*,
                     ::baidu::lumia::GetOverviewResponse* response,
                     ::google::protobuf::Closure* done) {
@@ -176,11 +176,11 @@ void LumiaCtrlImpl::GetOverview(::google::protobuf::RpcController*,
     LOG(INFO, "get overview  count %d", count);
 }
 
-void LumiaCtrlImpl::ScheduleNextQuery() {
-    workers_.DelayTask(30000, boost::bind(&LumiaCtrlImpl::LaunchQuery, this));
+void LumiaMasterImpl::ScheduleNextQuery() {
+    workers_.DelayTask(30000, boost::bind(&LumiaMasterImpl::LaunchQuery, this));
 }
 
-void LumiaCtrlImpl::LaunchQuery() {
+void LumiaMasterImpl::LaunchQuery() {
     MutexLock lock(&mutex_);
     if (query_node_count_ != 0) {
         LOG(WARNING, "invalide query node count number %d", query_node_count_);
@@ -195,27 +195,27 @@ void LumiaCtrlImpl::LaunchQuery() {
     }
 }
 
-void LumiaCtrlImpl::QueryNode(const std::string& node_addr) {
+void LumiaMasterImpl::QueryNode(const std::string& node_addr) {
     mutex_.AssertHeld();
     LOG(INFO, "start a query on node %s", node_addr.c_str());
-    QueryAgentRequest* request = new QueryAgentRequest();
-    QueryAgentResponse* response = new QueryAgentResponse();
-    LumiaAgent_Stub* agent = NULL;
+    QueryRequest* request = new QueryRequest();
+    QueryResponse* response = new QueryResponse();
+    LumiaLet_Stub* agent = NULL;
     rpc_client_->GetStub(node_addr, &agent);
-    boost::function<void (const QueryAgentRequest*, QueryAgentResponse*, bool, int)> query_callback; 
-    query_callback = boost::bind(&LumiaCtrlImpl::QueryCallBack, this, _1, _2, _3, _4, node_addr);
-    rpc_client_->AsyncRequest(agent, &LumiaAgent_Stub::Query,
+    boost::function<void (const QueryRequest*, QueryResponse*, bool, int)> query_callback; 
+    query_callback = boost::bind(&LumiaMasterImpl::QueryCallBack, this, _1, _2, _3, _4, node_addr);
+    rpc_client_->AsyncRequest(agent, &LumiaLet_Stub::Query,
                               request, response, query_callback, 5, 0);
     query_node_count_++;
     delete agent;
 }
 
-void LumiaCtrlImpl::QueryCallBack(const QueryAgentRequest* request,
-                                  QueryAgentResponse* response,
+void LumiaMasterImpl::QueryCallBack(const QueryRequest* request,
+                                  QueryResponse* response,
                                   bool fails, int , 
                                   const std::string& node_addr) {
-    boost::scoped_ptr<const QueryAgentRequest> request_ptr(request);
-    boost::scoped_ptr<QueryAgentResponse> response_ptr(response);
+    boost::scoped_ptr<const QueryRequest> request_ptr(request);
+    boost::scoped_ptr<QueryResponse> response_ptr(response);
    
     MutexLock lock(&mutex_);
     if (--query_node_count_ == 0) {
@@ -236,7 +236,7 @@ void LumiaCtrlImpl::QueryCallBack(const QueryAgentRequest* request,
        response->minion_status().all_is_well());
 }
 
-void LumiaCtrlImpl::ImportData(::google::protobuf::RpcController* ,
+void LumiaMasterImpl::ImportData(::google::protobuf::RpcController* ,
                     const ::baidu::lumia::ImportDataRequest* request,
                     ::baidu::lumia::ImportDataResponse* response,
                     ::google::protobuf::Closure* done) {
@@ -293,7 +293,7 @@ void LumiaCtrlImpl::ImportData(::google::protobuf::RpcController* ,
     done->Run();
 }
 
-void LumiaCtrlImpl::Ping(::google::protobuf::RpcController*,
+void LumiaMasterImpl::Ping(::google::protobuf::RpcController*,
                          const ::baidu::lumia::PingRequest* request,
                          ::baidu::lumia::PingResponse* ,
                          ::google::protobuf::Closure* done) {
@@ -312,18 +312,18 @@ void LumiaCtrlImpl::Ping(::google::protobuf::RpcController*,
     }else {
         LOG(INFO, "new node %s join", request->node_addr().c_str());
     }
-    int64_t id = dead_checkers_.DelayTask(10000, boost::bind(&LumiaCtrlImpl::HandleNodeOffline, this, request->node_addr()));
+    int64_t id = dead_checkers_.DelayTask(10000, boost::bind(&LumiaMasterImpl::HandleNodeOffline, this, request->node_addr()));
     node_timers_[request->node_addr()] = id;
     done->Run();
 }
 
-void LumiaCtrlImpl::HandleNodeOffline(const std::string& node_addr) {
+void LumiaMasterImpl::HandleNodeOffline(const std::string& node_addr) {
     MutexLock lock(&mutex_);
     live_nodes_.erase(node_addr);
     dead_nodes_.insert(node_addr);
 }
 
-void LumiaCtrlImpl::ReportDeadMinion(::google::protobuf::RpcController* ,
+void LumiaMasterImpl::ReportDeadMinion(::google::protobuf::RpcController* ,
                           const ::baidu::lumia::ReportDeadMinionRequest* request,
                           ::baidu::lumia::ReportDeadMinionResponse* response,
                           ::google::protobuf::Closure* done) {
@@ -353,12 +353,12 @@ void LumiaCtrlImpl::ReportDeadMinion(::google::protobuf::RpcController* ,
         return;
     }
     i_it->minion_->set_state(kMinionDeadChecking);
-    workers_.AddTask(boost::bind(&LumiaCtrlImpl::HandleDeadReport, this, request->ip()));
+    workers_.AddTask(boost::bind(&LumiaMasterImpl::HandleDeadReport, this, request->ip()));
     response->set_status(kLumiaOk);
     done->Run();
 }
 
-void LumiaCtrlImpl::HandleDeadReport(const std::string& ip) {
+void LumiaMasterImpl::HandleDeadReport(const std::string& ip) {
     MutexLock lock(&mutex_);
     const minion_set_ip_index_t& index = boost::multi_index::get<ip_tag>(minion_set_);
     minion_set_ip_index_t::const_iterator i_it = index.find(ip);
@@ -371,7 +371,7 @@ void LumiaCtrlImpl::HandleDeadReport(const std::string& ip) {
                                 "root",
                                 1,
                                 &sessionid,
-                                boost::bind(&LumiaCtrlImpl::CheckDeadCallBack, this, _1, _2, _3));
+                                boost::bind(&LumiaMasterImpl::CheckDeadCallBack, this, _1, _2, _3));
     if (!ok) {
         LOG(WARNING, "fail to run dead check script on minion %s", i_it->hostname_.c_str());
         return;
@@ -379,7 +379,7 @@ void LumiaCtrlImpl::HandleDeadReport(const std::string& ip) {
 }
 
 
-void LumiaCtrlImpl::CheckDeadCallBack(const std::string sessionid,
+void LumiaMasterImpl::CheckDeadCallBack(const std::string sessionid,
                                       const std::vector<std::string> success,
                                       const std::vector<std::string> fails) {
     LOG(INFO, "dead check with session %s  callback success host %s, fails %s",
@@ -400,19 +400,19 @@ void LumiaCtrlImpl::CheckDeadCallBack(const std::string sessionid,
     std::string reboot_sessionid;
     if (fail_ids.size() > 0) {
         bool ok = minion_ctrl_->Reboot(fail_ids,
-                                   boost::bind(&LumiaCtrlImpl::RebootCallBack, this, _1, _2, _3), &reboot_sessionid);
+                                   boost::bind(&LumiaMasterImpl::RebootCallBack, this, _1, _2, _3), &reboot_sessionid);
         if (!ok) {
             LOG(WARNING, "fail to submit reboot to rms with dead check session %s", sessionid.c_str());
             return;
         } 
     }  
     if (success.size() > 0) {
-        workers_.AddTask(boost::bind(&LumiaCtrlImpl::HandleInitAgent, this, success));
+        workers_.AddTask(boost::bind(&LumiaMasterImpl::HandleInitAgent, this, success));
     }
     
 }
 
-void LumiaCtrlImpl::HandleInitAgent(const std::vector<std::string> hosts) {
+void LumiaMasterImpl::HandleInitAgent(const std::vector<std::string> hosts) {
     MutexLock lock(&mutex_);
     std::map<std::string, std::vector<std::string> > hosts_map;
     const minion_set_hostname_index_t& index = boost::multi_index::get<hostname_tag>(minion_set_);
@@ -452,7 +452,7 @@ void LumiaCtrlImpl::HandleInitAgent(const std::vector<std::string> hosts) {
     }
 }
 
-bool LumiaCtrlImpl::DoInitAgent(const std::vector<std::string> hosts,
+bool LumiaMasterImpl::DoInitAgent(const std::vector<std::string> hosts,
                                 const std::string scripts) {
     std::string sessionid;
     bool ok = minion_ctrl_->ExecOnNoah(scripts, 
@@ -460,7 +460,7 @@ bool LumiaCtrlImpl::DoInitAgent(const std::vector<std::string> hosts,
                                 "root",
                                 10,
                                 &sessionid,
-                                boost::bind(&LumiaCtrlImpl::InitAgentCallBack, this, _1, _2, _3));
+                                boost::bind(&LumiaMasterImpl::InitAgentCallBack, this, _1, _2, _3));
     if (!ok) {
         LOG(WARNING, "fail to init agents %s", boost::algorithm::join(hosts, ",").c_str());
         return false;
@@ -469,7 +469,7 @@ bool LumiaCtrlImpl::DoInitAgent(const std::vector<std::string> hosts,
     return true;
 }
 
-void LumiaCtrlImpl::InitAgentCallBack(const std::string sessionid,
+void LumiaMasterImpl::InitAgentCallBack(const std::string sessionid,
                                       const std::vector<std::string> success,
                                       const std::vector<std::string> fails) {
     MutexLock lock(&mutex_);
@@ -487,7 +487,7 @@ void LumiaCtrlImpl::InitAgentCallBack(const std::string sessionid,
     }
 }
 
-void LumiaCtrlImpl::GetStatus(::google::protobuf::RpcController* controller,
+void LumiaMasterImpl::GetStatus(::google::protobuf::RpcController* controller,
                     const ::baidu::lumia::GetStatusRequest* request,
                     ::baidu::lumia::GetStatusResponse* response,
                     ::google::protobuf::Closure* done) {
@@ -504,7 +504,7 @@ void LumiaCtrlImpl::GetStatus(::google::protobuf::RpcController* controller,
     done->Run();
 }
 
-void LumiaCtrlImpl::RebootCallBack(const std::string sessionid,
+void LumiaMasterImpl::RebootCallBack(const std::string sessionid,
                                    const std::vector<std::string> success,
                                    const std::vector<std::string> fails){ 
 
@@ -532,12 +532,12 @@ void LumiaCtrlImpl::RebootCallBack(const std::string sessionid,
         boost::algorithm::join(hosts_ok, ",").c_str(),
         boost::algorithm::join(hosts_err, ",").c_str());
     if (success.size() > 0) {
-        workers_.DelayTask(10000, boost::bind(&LumiaCtrlImpl::HandleInitAgent, this, hosts_ok));
+        workers_.DelayTask(10000, boost::bind(&LumiaMasterImpl::HandleInitAgent, this, hosts_ok));
     }
 
 }
 
-void LumiaCtrlImpl::GetMinion(::google::protobuf::RpcController* /*controller*/,
+void LumiaMasterImpl::GetMinion(::google::protobuf::RpcController* /*controller*/,
                    const ::baidu::lumia::GetMinionRequest* request,
                    ::baidu::lumia::GetMinionResponse* response,
                    ::google::protobuf::Closure* done) {
@@ -570,33 +570,35 @@ void LumiaCtrlImpl::GetMinion(::google::protobuf::RpcController* /*controller*/,
 
 }
 
-std::string LumiaCtrlImpl::GetUUID() {
+std::string LumiaMasterImpl::GetUUID() {
     boost::uuids::uuid uuid = boost::uuids::random_generator()();
     return boost::lexical_cast<std::string>(uuid); 
 }
 
-void LumiaCtrlImpl::ScheduleTask() {
+void LumiaMasterImpl::ScheduleTask() {
     MutexLock lock(&mutex_);
-    std::set<std::string>::iterator it = job_under_working_.begin();
-    for (; it != job_under_working_.end(); ++it) {
+    std::set<std::string>::iterator it = job_under_working_->begin();
+    for (; it != job_under_working_->end(); ++it) {
         Job* job = jobs_[*it];
-        std::map<std::string, Task*>::iterator task_it = job->tasks_.begin();
+        std::map<int32_t, Task*>::iterator task_it = job->tasks_.begin();
         for (; task_it != job->tasks_.end() && job->running_num_ < job->step_size_;
               ++task_it) {
             if (task_it->second->state_ != kCtrlTaskPending) {
                 continue;
             }
             bool ok = RunTask(job, task_it->second);
-            LOG(INFO, "launch task %d of job %s on agent %s successfully", 
+            if (ok) {
+                LOG(INFO, "launch task %d of job %s on agent %s successfully", 
                     task_it->second->offset_,
                     job->id_.c_str(),
-                    task_it->addr.c_str());
-            job->running_num_ ++;
+                    task_it->second->addr_.c_str());
+                job->running_num_ ++;
+            }
         }
     }
 }
 
-bool LumiaCtrlImpl::RunTask(Job* job, Task* task) {
+bool LumiaMasterImpl::RunTask(Job* job, Task* task) {
     mutex_.AssertHeld();
     if (task == NULL) {
         LOG(WARNING, "task is null");
@@ -606,38 +608,41 @@ bool LumiaCtrlImpl::RunTask(Job* job, Task* task) {
     request->set_job_id(task->job_id_);
     request->set_offset(task->offset_);
     request->set_content(job->content_);
-    request->set_user_(job->user_);
+    request->set_user(job->user_);
     ExecResponse* response = new ExecResponse();
     boost::function<void (const ExecRequest*, ExecResponse*, bool, int)> run_callback;
-    run_callback = boost::bind(&LumiaCtrlImpl::RunCallback, this, 
-            _1, _2, _3, _4, task->addr_);
-    task->state_ = kCtrlRunning;
-    rpc_client_->AsyncRequest(agent, &LumiaAgent_Stub::Exec,
+    run_callback = boost::bind(&LumiaMasterImpl::RunTaskCallback, this,
+                               _1, _2, _3, _4, task->addr_);
+    task->state_ = kCtrlTaskRunning;
+    LumiaLet_Stub* agent = NULL;
+    rpc_client_->GetStub(task->addr_, &agent);
+    rpc_client_->AsyncRequest(agent, &LumiaLet_Stub::Exec,
                               request, response, run_callback, 5, 0);
+    delete agent;
     return true;
 }
 
-void LumiaCtrlImpl::RunTaskCallback(const ExecRequest* request,
-                                    ExecResponse* response,
-                                    bool fails, int , 
-                                    const std::string& node_addr) {
+void LumiaMasterImpl::RunTaskCallback(const ExecRequest* request,
+                                      ExecResponse* response,
+                                      bool fails, int , 
+                                      const std::string& node_addr) {
     boost::scoped_ptr<const ExecRequest> request_ptr(request);
     boost::scoped_ptr<ExecResponse> response_ptr(response);
     MutexLock lock(&mutex_);
-    if (fails || response.status() != 0) {
+    if (fails || response->status() != 0) {
         LOG(WARNING, "the job %s task %d exec fails on agent %s",
                 request->job_id().c_str(),
                 request->offset(),
                 node_addr.c_str());
         std::map<std::string, Job*>::iterator it = jobs_.find(request->job_id());
         if (it != jobs_.end()) {
-            it->second->tasks_[request->offset()]->state_ = kCtrlFails;
+            it->second->tasks_[request->offset()]->state_ = kCtrlTaskFails;
         }
         it->second->running_num_--;
     }
 }
 
-void LumiaCtrlImpl::Exec(::google::protobuf::RpcController* controller,
+void LumiaMasterImpl::Exec(::google::protobuf::RpcController* controller,
                          const ::baidu::lumia::ExecTaskRequest* request,
                          ::baidu::lumia::ExecTaskResponse* response,
                          ::google::protobuf::Closure* done) {
@@ -646,6 +651,8 @@ void LumiaCtrlImpl::Exec(::google::protobuf::RpcController* controller,
     job->id_ = GetUUID();
     job->content_ = request->content();
     job->user_ = request->user();
+    LOG(INFO, "submit a job with conten %s and user %s", job->content_.c_str(),
+        job->user_.c_str());
     const minion_set_hostname_index_t& ht_index = boost::multi_index::get<hostname_tag>(minion_set_);
     for (int i = 0; i < request->hosts_size(); i++) {
         std::string addr = request->hosts(i);
@@ -659,11 +666,11 @@ void LumiaCtrlImpl::Exec(::google::protobuf::RpcController* controller,
         task->job_id_ = job->id_;
         task->state_ = kCtrlTaskPending;
         task->offset_ = i;
-        task->addr = request->hosts(i);
+        task->addr_ = request->hosts(i);
         job->tasks_.insert(std::make_pair(i, task));
     }
     job->running_num_ = 0;
-    job_under_working_.insert(job->id_);
+    job_under_working_->insert(job->id_);
     response->set_status(kLumiaOk);
     done->Run();
     LOG(INFO, "submit task with job %s successfully", job->id_.c_str());
